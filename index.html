@@ -5,42 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Torn War Room</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-        
-        /* HEADER & TABS */
-        .header-bg { background: linear-gradient(135deg, #212529 0%, #495057 100%); color: white; padding: 1.5rem 0 0 0; margin-bottom: 1.5rem; }
-        .nav-tabs { border-bottom: none; justify-content: center; }
-        .nav-link { color: #ccc; border: none; font-weight: bold; padding: 10px 20px; border-radius: 10px 10px 0 0; }
-        .nav-link.active { background-color: #f0f2f5; color: #333; }
-        .nav-link:hover { color: white; }
-
-        /* CHAIN MONITOR */
-        .chain-box { background: #333; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-        .chain-count { font-size: 2.5rem; font-weight: bold; color: #ffc107; line-height: 1; }
-        .chain-timer { font-size: 1.2rem; font-weight: bold; color: #dc3545; }
-
-        /* BADGES */
-        .badge-okay { background-color: #198754; color: white; }
-        .badge-hospital { background-color: #dc3545; color: white; }
-        .badge-jail { background-color: #fd7e14; color: white; }
-        .badge-travel { background-color: #0dcaf0; color: white; }
-        
-        .respect-cell { font-family: 'Courier New', monospace; font-weight: bold; color: #0d6efd; }
-        .rank-cell { font-size: 0.85rem; color: #666; font-style: italic; }
-        
-        .card { border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .btn-attack { font-weight: bold; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="header-bg">
     <div class="container text-center">
         <h1>⚔️ Torn War Room</h1>
-        <p class="mb-3 text-white-50">Chain Monitor & Target Manager</p>
-        
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <div class="global-settings mt-3">
+            <label class="small text-white-50 mb-1 d-block">YOUR API KEY (REQUIRED)</label>
+            <input type="text" id="apiKey" class="form-control api-input" placeholder="Enter Public Key Here">
+        </div>
+
+        <ul class="nav nav-tabs mt-3" id="myTab" role="tablist">
             <li class="nav-item">
                 <button class="nav-link active" id="war-tab" data-bs-toggle="tab" data-bs-target="#war-panel" type="button">🛡️ War Room</button>
             </li>
@@ -55,38 +32,28 @@
 </div>
 
 <div class="container">
-    
-    <div class="row mb-3 justify-content-center">
-        <div class="col-md-8">
-            <div class="chain-box text-center" id="chainPanel" style="display:none;">
-                <div class="row align-items-center">
-                    <div class="col-6 border-end border-secondary">
-                        <div class="small text-muted text-uppercase">Chain Count</div>
-                        <div id="chainCount" class="chain-count">-</div>
-                    </div>
-                    <div class="col-6">
-                        <div class="small text-muted text-uppercase">Timeout</div>
-                        <div id="chainTimeout" class="chain-timer">-</div>
-                    </div>
-                </div>
-                <div class="mt-2 text-white-50" style="font-size: 0.8rem;">
-                    <button class="btn btn-sm btn-outline-light" onclick="updateChainOnly()">Refresh Chain</button>
-                </div>
+    <div class="chain-box text-center" id="chainPanel">
+        <div class="row align-items-center">
+            <div class="col-6 border-end border-secondary">
+                <div class="small text-muted text-uppercase" style="font-size:0.7em;">Chain</div>
+                <div id="chainCount" class="chain-count">-</div>
             </div>
+            <div class="col-6">
+                <div class="small text-muted text-uppercase" style="font-size:0.7em;">Timeout</div>
+                <div id="chainTimeout" class="chain-timer">-</div>
+            </div>
+        </div>
+        <div class="mt-1">
+            <button class="btn btn-sm btn-outline-secondary py-0" style="font-size: 0.7em;" onclick="updateChainOnly()">Refresh Chain</button>
         </div>
     </div>
 
     <div class="tab-content" id="myTabContent">
-        
         <div class="tab-pane fade show active" id="war-panel" role="tabpanel">
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="card p-3">
                         <h5 class="card-title mb-3">⚙️ War Config</h5>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">API Key</label>
-                            <input type="text" id="apiKey" class="form-control" placeholder="Public Key">
-                        </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Enemy Faction ID</label>
                             <div class="input-group">
@@ -109,7 +76,6 @@
                         <button class="btn btn-primary w-100" onclick="fetchTargets()">🚀 Scan Targets</button>
                     </div>
                 </div>
-
                 <div class="col-md-8">
                     <div class="card p-0 overflow-hidden">
                         <div class="card-header bg-dark text-white">Target List</div>
@@ -125,7 +91,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="warTableBody">
-                                    <tr><td colspan="5" class="text-center p-4 text-muted">Ready to scan.</td></tr>
+                                    <tr><td colspan="5" class="text-center p-4 text-muted">Enter Enemy ID and click Scan.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -140,14 +106,9 @@
                     <div class="card p-5 shadow-sm">
                         <div class="mb-4" style="font-size: 3rem;">📄</div>
                         <h3>External Inactive Targets</h3>
-                        <p class="text-muted">
-                            The inactive target list is hosted on an external website/sheet.<br>
-                            Click the button below to open it in a new tab.
-                        </p>
+                        <p class="text-muted">The inactive target list is hosted externally.</p>
                         <div class="d-grid gap-2 col-8 mx-auto mt-3">
-                            <a id="extLinkBtn" href="#" target="_blank" class="btn btn-primary btn-lg fw-bold">
-                                🔗 Open Inactive List
-                            </a>
+                            <a id="extLinkBtn" href="#" target="_blank" class="btn btn-primary btn-lg fw-bold">🔗 Open Inactive List</a>
                         </div>
                     </div>
                 </div>
@@ -160,13 +121,12 @@
                     <div class="card p-3">
                         <h5 class="card-title mb-3">📝 My Watchlist</h5>
                         <div class="mb-3">
-                            <label class="form-label">Custom User IDs (One per line)</label>
-                            <textarea id="watchlistIds" class="form-control" rows="8" placeholder="Enter IDs manually here..."></textarea>
+                            <label class="form-label">User IDs (One per line)</label>
+                            <textarea id="watchlistIds" class="form-control" rows="8" placeholder="123456&#10;789012"></textarea>
                         </div>
                         <button class="btn btn-success w-100" onclick="checkWatchlist()">👀 Check Status</button>
                     </div>
                 </div>
-
                 <div class="col-md-8">
                     <div class="card p-0 overflow-hidden">
                         <div class="card-header bg-success text-white d-flex justify-content-between">
@@ -192,177 +152,12 @@
                 </div>
             </div>
         </div>
+    </div>
 
-    </div> 
-
-    <div id="alertBox" class="mt-3"></div>
-
+    <div id="alertBox" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>
 </div>
 
-<script>
-    // ==========================================
-    // 🌐 PASTE YOUR WEBSITE/SHEET LINK HERE
-    // ==========================================
-    const TARGET_WEBSITE_URL = "https://oran.pw/baldrstargets/"; 
-    // ==========================================
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedKey = localStorage.getItem('torn_api_key');
-        if (savedKey) document.getElementById('apiKey').value = savedKey;
-        const savedList = localStorage.getItem('torn_watchlist');
-        if (savedList) document.getElementById('watchlistIds').value = savedList;
-        
-        // Set the external link
-        document.getElementById('extLinkBtn').href = TARGET_WEBSITE_URL;
-    });
-
-    function showAlert(msg, type = 'danger') {
-        const el = document.getElementById('alertBox');
-        el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
-        setTimeout(() => el.innerHTML = '', 4000);
-    }
-    
-    function getBadge(state) {
-        if (state === 'Okay') return 'badge-okay';
-        if (state === 'Hospital') return 'badge-hospital';
-        if (state === 'Jail') return 'badge-jail';
-        return 'badge-travel';
-    }
-
-    // --- TAB 1: WAR ROOM ---
-    async function autoDetect() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) return showAlert("Enter API Key first.");
-        localStorage.setItem('torn_api_key', apiKey);
-        try {
-            const userRes = await fetch(`https://api.torn.com/user/?selections=profile&key=${apiKey}`);
-            const userData = await userRes.json();
-            if (userData.error) throw new Error(userData.error.error);
-            const myFacId = userData.faction.faction_id;
-            localStorage.setItem('my_faction_id', myFacId);
-            const facRes = await fetch(`https://api.torn.com/faction/${myFacId}?selections=basic&key=${apiKey}`);
-            const facData = await facRes.json();
-            let enemyId = null;
-            const rankedWars = facData.ranked_wars || {};
-            for (const warId in rankedWars) {
-                const factions = rankedWars[warId].factions;
-                for (const fid in factions) {
-                    if (parseInt(fid) !== myFacId) enemyId = fid;
-                }
-            }
-            if (enemyId) {
-                document.getElementById('enemyId').value = enemyId;
-                showAlert(`Enemy Found: ${enemyId}`, 'success');
-                fetchTargets();
-            } else {
-                showAlert("No Ranked War active. Enter Enemy ID manually.", 'warning');
-            }
-        } catch (e) { showAlert(e.message); }
-    }
-
-    async function updateChainOnly() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        let myFacId = localStorage.getItem('my_faction_id');
-        if (!apiKey || !myFacId) return;
-        try {
-            const response = await fetch(`https://api.torn.com/faction/${myFacId}?selections=chain&key=${apiKey}`);
-            const data = await response.json();
-            if (data.chain) {
-                document.getElementById('chainPanel').style.display = 'block';
-                document.getElementById('chainCount').innerText = data.chain.current;
-                const timerEl = document.getElementById('chainTimeout');
-                timerEl.innerText = data.chain.timeout + "s";
-                timerEl.style.color = data.chain.timeout < 60 ? '#dc3545' : '#198754';
-            }
-        } catch (e) { console.error(e); }
-    }
-
-    async function fetchTargets() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        const enemyId = document.getElementById('enemyId').value.trim();
-        if (!apiKey || !enemyId) return showAlert("API Key & Enemy ID required.");
-        localStorage.setItem('torn_api_key', apiKey);
-        updateChainOnly();
-        const tbody = document.getElementById('warTableBody');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Scanning...</td></tr>';
-        try {
-            const response = await fetch(`https://api.torn.com/faction/${enemyId}?selections=basic,members&key=${apiKey}`);
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.error);
-            let members = Object.values(data.members).sort((a, b) => b.level - a.level);
-            const statusFilter = document.getElementById('statusFilter').value;
-            const minLevel = parseInt(document.getElementById('minLevel').value) || 0;
-            const maxLevel = parseInt(document.getElementById('maxLevel').value) || 1000;
-            tbody.innerHTML = '';
-            members.forEach(m => {
-                const state = m.status.state;
-                if (m.level < minLevel || m.level > maxLevel) return;
-                if (statusFilter === 'okay' && state !== 'Okay') return;
-                if (state === 'Fallen' || state === 'Federal') return;
-                const respectMin = ((Math.log(m.level) + 1) / 4).toFixed(2);
-                const respectMax = (respectMin * 3).toFixed(2);
-                tbody.innerHTML += `
-                    <tr>
-                        <td><a href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" class="fw-bold text-dark text-decoration-none">${m.name}</a></td>
-                        <td>${m.level}</td>
-                        <td class="respect-cell">${respectMin}-${respectMax}</td>
-                        <td><span class="badge ${getBadge(state)}">${state}</span> <small class="text-muted">${m.status.description.substring(0,12)}</small></td>
-                        <td><a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-sm btn-danger btn-attack">Attack</a></td>
-                    </tr>`;
-            });
-        } catch (e) { showAlert(e.message); }
-    }
-
-    // --- TAB 3: CUSTOM WATCHLIST ---
-    async function checkWatchlist() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) return showAlert("Please enter your API Key in the settings.");
-        const rawIds = document.getElementById('watchlistIds').value;
-        if (!rawIds) return showAlert("Please enter some User IDs.");
-        localStorage.setItem('torn_watchlist', rawIds);
-        const ids = rawIds.split(/[\n,]+/).map(id => id.trim()).filter(id => id.length > 0);
-        
-        const tbody = document.getElementById('watchTableBody');
-        const progress = document.getElementById('watchProgress');
-        
-        tbody.innerHTML = '';
-        progress.innerText = `0 / ${ids.length}`;
-
-        for (let i = 0; i < ids.length; i++) {
-            const id = ids[i];
-            try {
-                const res = await fetch(`https://api.torn.com/user/${id}?selections=profile&key=${apiKey}`);
-                const data = await res.json();
-                if (data.error) {
-                    tbody.innerHTML += `<tr><td colspan="4" class="text-danger">ID ${id}: ${data.error.error}</td></tr>`;
-                    continue;
-                }
-                const state = data.status.state;
-                const badge = getBadge(state);
-                tbody.innerHTML += `
-                    <tr>
-                        <td>
-                            <a href="https://www.torn.com/profiles.php?XID=${data.player_id}" target="_blank" class="fw-bold text-dark text-decoration-none">${data.name}</a>
-                            <div class="small text-muted">[${data.player_id}]</div>
-                        </td>
-                        <td>
-                            <div>${data.rank}</div>
-                            <div class="rank-cell">Level ${data.level}</div>
-                        </td>
-                        <td>
-                            <span class="badge ${badge}">${state}</span>
-                            <div class="small text-muted">${data.status.description}</div>
-                        </td>
-                        <td><a href="https://www.torn.com/loader.php?sid=attack&user2ID=${data.player_id}" target="_blank" class="btn btn-sm btn-danger btn-attack">Attack</a></td>
-                    </tr>`;
-            } catch (e) { console.error(e); }
-            progress.innerText = `${i + 1} / ${ids.length}`;
-            if (i < ids.length - 1) await new Promise(r => setTimeout(r, 250));
-        }
-        progress.innerText = "Done!";
-    }
-</script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
