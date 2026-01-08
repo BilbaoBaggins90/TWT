@@ -45,7 +45,7 @@
         }
         .table-custom tr:hover td { background-color: #2a2a2a; }
 
-        /* MODERN BADGES (The "Glow" Look) */
+        /* MODERN BADGES */
         .status-badge { 
             padding: 5px 10px; 
             border-radius: 6px; 
@@ -58,17 +58,15 @@
             text-align: center;
         }
 
-        /* Status Colors */
         .st-okay { background: rgba(32, 201, 151, 0.15); color: #20c997; border: 1px solid rgba(32, 201, 151, 0.3); }
         .st-hosp { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3); }
         .st-jail { background: rgba(255, 193, 7, 0.15);   color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
         .st-trav { background: rgba(13, 202, 240, 0.15);  color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.3); }
 
         .level-box { background: #333; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
-        .respect-val { color: #a5d8ff; font-family: monospace; font-size: 1.1em; } /* Light Blue */
+        .respect-val { color: #a5d8ff; font-family: monospace; font-size: 1.1em; } 
 
-        /* BUTTONS */
-        .btn-primary { background-color: #6f42c1; border: none; } /* Purple brand color */
+        .btn-primary { background-color: #6f42c1; border: none; }
         .btn-primary:hover { background-color: #5a32a3; }
         .btn-attack { background-color: #ff6b6b; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 15px; letter-spacing: 1px; }
         .btn-attack:hover { background-color: #fa5252; color: white; box-shadow: 0 0 10px rgba(255, 107, 107, 0.4); }
@@ -80,7 +78,7 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">v2</span></h3>
+                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">v2 Native</span></h3>
             </div>
             <div class="col-md-6 mt-3 mt-md-0">
                 <div class="input-group">
@@ -97,7 +95,7 @@
 
     <div id="loading" class="text-center py-5" style="display:none;">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-3 text-muted">Connecting to Torn...</p>
+        <p class="mt-3 text-muted">Talking to Torn API v2...</p>
     </div>
 
     <div id="dashboard" style="display:none;">
@@ -201,24 +199,19 @@
         if(getEl('enemyId').value.trim()) fetchTargets();
     }
 
-    // HYBRID API
-    async function apiFetch(v2, v1) {
+    // STRICT V2 API FETCHER
+    async function apiV2(endpoint) {
         const key = getEl('apiKey').value.trim();
-        try {
-            const r = await fetch(`https://api.torn.com/v2/${v2}?key=${key}`);
-            const d = await r.json();
-            if(!d.error) return d;
-            throw new Error();
-        } catch {
-            const r = await fetch(`https://api.torn.com/${v1}&key=${key}`);
-            const d = await r.json();
-            if(d.error) throw new Error(d.error.error);
-            return d;
-        }
+        // Uses strictly v2 endpoint structure
+        const res = await fetch(`https://api.torn.com/v2/${endpoint}?key=${key}`);
+        const data = await res.json();
+        
+        if(data.error) throw new Error(data.error.error || "Torn API Error");
+        return data;
     }
 
     async function getMyFactionId() {
-        const data = await apiFetch('user/profile', 'user/?selections=profile');
+        const data = await apiV2('user/profile');
         if(data.faction) localStorage.setItem('my_faction_id', data.faction.faction_id);
     }
 
@@ -226,7 +219,7 @@
         const id = localStorage.getItem('my_faction_id');
         if(!id) return;
         try {
-            const data = await apiFetch(`faction/${id}/chain`, `faction/${id}?selections=chain`);
+            const data = await apiV2(`faction/${id}/chain`);
             const c = data.chain || {};
             getEl('chainCount').innerText = c.current || 0;
             
@@ -245,12 +238,22 @@
         let enemyId = null;
 
         try {
-            // 1. Official Wars
-            const data = await apiFetch(`faction/${id}/wars`, `faction/${id}?selections=basic,territory`);
+            // 1. Official Wars (V2)
+            const data = await apiV2(`faction/${id}/wars`);
+            
+            // Handle V2 War Structure (Arrays vs Objects)
             const ranked = data.ranked_wars || {};
             for(let k in ranked) {
-                for(let fid in ranked[k].factions) if(fid != id) enemyId = fid;
+                // v2 might return standard object keys or array
+                const w = ranked[k];
+                if(w.factions) {
+                     for(let fid in w.factions) {
+                        if(parseInt(fid) !== parseInt(id)) enemyId = fid;
+                     }
+                }
             }
+            
+            // 2. Territory Wars (V2)
             if(!enemyId && data.territory_wars) {
                 data.territory_wars.forEach(w => {
                     if(w.assaulting_faction == id) enemyId = w.defending_faction;
@@ -258,21 +261,26 @@
                 });
             }
 
-            // 2. Detective Mode
+            // 3. Detective Mode (V2 Attacks)
             if(!enemyId) {
-                const attData = await apiFetch(`faction/${id}/attacks`, `faction/${id}?selections=attacks`);
-                const attacks = Object.values(attData.attacks || {});
+                const attData = await apiV2(`faction/${id}/attacks`);
+                // V2 often returns array for attacks
+                let attacks = [];
+                if(Array.isArray(attData.attacks)) attacks = attData.attacks;
+                else if(attData.attacks) attacks = Object.values(attData.attacks);
+
                 const counts = {};
                 attacks.forEach(a => {
                     if(a.initiated_by == id && a.defender_faction && a.defender_faction != id) {
                         counts[a.defender_faction] = (counts[a.defender_faction]||0)+1;
                     }
                 });
+                
                 let max = 0;
                 for(let fid in counts) {
                     if(counts[fid] > max) { max = counts[fid]; enemyId = fid; }
                 }
-                if(max < 3) enemyId = null; // threshold
+                if(max < 3) enemyId = null; 
                 if(enemyId) showError(`Detective: Found ${max} recent hits on ID ${enemyId}.`);
             }
 
@@ -303,7 +311,7 @@
         getEl('targetTable').innerHTML = '';
 
         try {
-            const data = await apiFetch(`faction/${parsed.id}/members`, `faction/${parsed.id}?selections=basic,members`);
+            const data = await apiV2(`faction/${parsed.id}/members`);
             
             let members = Array.isArray(data.members) ? data.members : Object.values(data.members || {});
             members.sort((a,b) => b.level - a.level);
@@ -313,13 +321,14 @@
             let count = 0;
 
             members.forEach(m => {
-                if(filter === 'okay' && m.status.state !== 'Okay') return;
+                const state = m.status.state;
+                if(filter === 'okay' && state !== 'Okay') return;
                 count++;
 
                 let stClass = 'st-okay';
-                if(m.status.state === 'Hospital') stClass = 'st-hosp';
-                if(m.status.state === 'Jail') stClass = 'st-jail';
-                if(m.status.state === 'Traveling') stClass = 'st-trav';
+                if(state === 'Hospital') stClass = 'st-hosp';
+                if(state === 'Jail') stClass = 'st-jail';
+                if(state === 'Traveling') stClass = 'st-trav';
 
                 const rMin = ((Math.log(m.level)+1)/4).toFixed(2);
                 const rMax = (rMin*3).toFixed(2);
@@ -332,7 +341,7 @@
                     </td>
                     <td><span class="level-box">${m.level}</span></td>
                     <td class="respect-val">${rMin} - ${rMax}</td>
-                    <td><span class="status-badge ${stClass}">${m.status.state}</span></td>
+                    <td><span class="status-badge ${stClass}">${state}</span></td>
                     <td class="text-end" style="padding-right: 25px;">
                         <a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-attack rounded-pill">ATTACK</a>
                     </td>
