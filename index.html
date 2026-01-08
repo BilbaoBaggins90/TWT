@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torn War Room</title>
+    <title>Torn War Room (Pure v2)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #121212; color: #e0e0e0; font-family: 'Inter', sans-serif; }
@@ -24,12 +24,9 @@
         .st-hosp { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3); }
         .st-jail { background: rgba(255, 193, 7, 0.15);   color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
         .st-trav { background: rgba(13, 202, 240, 0.15);  color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.3); }
-        
-        /* LEVEL COLORS */
-        .lvl-easy { color: #20c997; font-weight: bold; } /* Green */
-        .lvl-fair { color: #ffc107; font-weight: bold; } /* Yellow */
-        .lvl-hard { color: #ff6b6b; font-weight: bold; } /* Red */
-        
+        .lvl-easy { color: #20c997; font-weight: bold; } 
+        .lvl-fair { color: #ffc107; font-weight: bold; } 
+        .lvl-hard { color: #ff6b6b; font-weight: bold; } 
         .btn-attack { background-color: #ff6b6b; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 15px; }
         .btn-spy { background-color: #495057; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 10px; margin-right: 5px; }
     </style>
@@ -40,7 +37,7 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">Hybrid</span></h3>
+                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">Pure v2</span></h3>
             </div>
             <div class="col-md-6 mt-3 mt-md-0">
                 <div class="input-group">
@@ -56,7 +53,7 @@
     <div id="alertArea"></div>
     <div id="loading" class="text-center py-5" style="display:none;">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-3 text-muted">Connecting...</p>
+        <p class="mt-3 text-muted">Talking to API v2...</p>
     </div>
 
     <div id="dashboard" style="display:none;">
@@ -146,6 +143,17 @@
         });
     });
 
+    // --- PURE V2 API FETCHER ---
+    async function apiV2(endpoint) {
+        const key = getEl('apiKey').value.trim();
+        // Uses strictly v2 endpoint structure
+        const res = await fetch(`https://api.torn.com/v2/${endpoint}?key=${key}`);
+        const data = await res.json();
+        
+        if(data.error) throw new Error(data.error.error || "Torn API Error");
+        return data;
+    }
+
     // --- MAIN ENGINE ---
 
     async function initTool() {
@@ -164,17 +172,9 @@
         if(getEl('enemyId').value.trim()) fetchTargets();
     }
 
-    // 1. GET PROFILE (Uses v1 - Reliable)
+    // 1. GET PROFILE (V2)
     async function getMyProfile() {
-        const key = getEl('apiKey').value.trim();
-        // Force update UI to show we are looking
-        getEl('myLevelDisplay').innerText = "...";
-        
-        const res = await fetch(`https://api.torn.com/user/?selections=profile&key=${key}`);
-        const data = await res.json();
-        
-        if(data.error) throw new Error(data.error.error);
-        
+        const data = await apiV2('user/profile');
         if(data.faction) localStorage.setItem('my_faction_id', data.faction.faction_id);
         if(data.level) {
             localStorage.setItem('my_level', data.level);
@@ -182,19 +182,18 @@
         }
     }
 
-    // 2. DETECT WAR (Uses v2 - Required for Ranked Wars)
+    // 2. DETECT WAR (V2)
     async function autoDetectWar() {
         const id = localStorage.getItem('my_faction_id');
-        const key = getEl('apiKey').value.trim();
         if(!id) return showError("Load profile first");
         
         getEl('loading').style.display = 'block';
         let enemyId = null;
 
         try {
-            const res = await fetch(`https://api.torn.com/v2/faction/${id}/wars?key=${key}`);
-            const data = await res.json();
+            const data = await apiV2(`faction/${id}/wars`);
             
+            // Handle V2 War Structure (Arrays vs Objects)
             const ranked = data.ranked_wars || {};
             for(let k in ranked) {
                 const w = ranked[k];
@@ -220,12 +219,11 @@
         getEl('loading').style.display = 'none';
     }
 
-    // 3. FETCH TARGETS (Uses v1 - Reliable for Members)
+    // 3. FETCH TARGETS (V2)
     async function fetchTargets() {
         const rawId = getEl('enemyId').value.trim();
         if(!rawId) return showError("Enter valid ID");
         
-        const key = getEl('apiKey').value.trim();
         getEl('loading').style.display = 'block';
         getEl('targetTable').innerHTML = '';
         
@@ -235,15 +233,14 @@
             try {
                 await getMyProfile();
                 myLevel = parseInt(localStorage.getItem('my_level')) || 0;
-            } catch(e) { console.warn("Could not fetch profile for level comp."); }
+            } catch(e) {}
         }
 
         try {
-            const res = await fetch(`https://api.torn.com/faction/${rawId}?selections=basic,members&key=${key}`);
-            const data = await res.json();
-            if(data.error) throw new Error(data.error.error);
+            const data = await apiV2(`faction/${rawId}/members`);
             
-            let members = Object.values(data.members || {});
+            // V2 usually returns array, but safety check for object
+            let members = Array.isArray(data.members) ? data.members : Object.values(data.members || {});
             members.sort((a,b) => b.level - a.level);
             
             const filter = getEl('statusFilter').value;
@@ -251,13 +248,14 @@
             let count = 0;
 
             members.forEach(m => {
-                if(filter === 'okay' && m.status.state !== 'Okay') return;
+                const state = m.status.state;
+                if(filter === 'okay' && state !== 'Okay') return;
                 count++;
 
                 let stClass = 'st-okay';
-                if(m.status.state === 'Hospital') stClass = 'st-hosp';
-                if(m.status.state === 'Jail') stClass = 'st-jail';
-                if(m.status.state === 'Traveling') stClass = 'st-trav';
+                if(state === 'Hospital') stClass = 'st-hosp';
+                if(state === 'Jail') stClass = 'st-jail';
+                if(state === 'Traveling') stClass = 'st-trav';
 
                 const rMin = ((Math.log(m.level)+1)/4).toFixed(2);
                 const rMax = (rMin*3).toFixed(2);
@@ -291,7 +289,7 @@
                         <div class="${diffClass} small" style="font-size:0.75rem;">${diffText}</div>
                     </td>
                     <td class="text-info font-monospace">${rMin} - ${rMax}</td>
-                    <td><span class="status-badge ${stClass}">${m.status.state}</span></td>
+                    <td><span class="status-badge ${stClass}">${state}</span></td>
                     <td class="text-end" style="padding-right: 25px;">
                         <a href="https://yata.yt/profile/${m.id}" target="_blank" class="btn btn-spy rounded-pill" title="Check Spies on YATA">👁️ Spy</a>
                         <a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-attack rounded-pill">ATTACK</a>
@@ -307,14 +305,12 @@
         getEl('loading').style.display = 'none';
     }
 
-    // 4. CHAIN UPDATE (Uses v1)
+    // 4. CHAIN UPDATE (V2)
     async function updateChain() {
         const id = localStorage.getItem('my_faction_id');
-        const key = getEl('apiKey').value.trim();
         if(!id) return;
         try {
-            const res = await fetch(`https://api.torn.com/faction/${id}?selections=chain&key=${key}`);
-            const data = await res.json();
+            const data = await apiV2(`faction/${id}/chain`);
             const c = data.chain || {};
             getEl('chainCount').innerText = c.current || 0;
             
