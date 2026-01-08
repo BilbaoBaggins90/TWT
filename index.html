@@ -63,13 +63,20 @@
         .st-jail { background: rgba(255, 193, 7, 0.15);   color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
         .st-trav { background: rgba(13, 202, 240, 0.15);  color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.3); }
 
-        .level-box { background: #333; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
+        /* LEVEL DIFFERENCE COLORS */
+        .lvl-easy { color: #20c997; font-weight: bold; } /* Green */
+        .lvl-fair { color: #ffc107; font-weight: bold; } /* Yellow */
+        .lvl-hard { color: #ff6b6b; font-weight: bold; } /* Red */
+        .lvl-box  { background: #333; padding: 4px 8px; border-radius: 4px; display:inline-block; min-width: 40px; text-align: center;}
+
         .respect-val { color: #a5d8ff; font-family: monospace; font-size: 1.1em; } 
 
         .btn-primary { background-color: #6f42c1; border: none; }
         .btn-primary:hover { background-color: #5a32a3; }
         .btn-attack { background-color: #ff6b6b; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 15px; letter-spacing: 1px; }
         .btn-attack:hover { background-color: #fa5252; color: white; box-shadow: 0 0 10px rgba(255, 107, 107, 0.4); }
+        .btn-spy { background-color: #495057; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 10px; margin-right: 5px; }
+        .btn-spy:hover { background-color: #ced4da; color: #212529; }
     </style>
 </head>
 <body>
@@ -78,7 +85,7 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">v2 Native</span></h3>
+                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">v2</span></h3>
             </div>
             <div class="col-md-6 mt-3 mt-md-0">
                 <div class="input-group">
@@ -95,7 +102,7 @@
 
     <div id="loading" class="text-center py-5" style="display:none;">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-3 text-muted">Talking to Torn API v2...</p>
+        <p class="mt-3 text-muted">Analyzing Targets...</p>
     </div>
 
     <div id="dashboard" style="display:none;">
@@ -137,7 +144,7 @@
 
         <div class="card-custom overflow-hidden">
             <div class="card-header-custom d-flex justify-content-between align-items-center">
-                <span>Target List</span>
+                <span>Target List (My Level: <span id="myLevelDisplay" class="text-info">--</span>)</span>
                 <span id="targetCount" class="badge bg-secondary">0</span>
             </div>
             <div class="table-responsive">
@@ -145,7 +152,7 @@
                     <thead>
                         <tr>
                             <th style="padding-left: 25px;">Name</th>
-                            <th>Level</th>
+                            <th>Level (Diff)</th>
                             <th>Est. Respect</th>
                             <th>Status</th>
                             <th class="text-end" style="padding-right: 25px;">Action</th>
@@ -193,7 +200,7 @@
         
         getEl('dashboard').style.display = 'block';
         
-        try { await getMyFactionId(); updateChain(); } catch(e) {}
+        try { await getMyProfile(); updateChain(); } catch(e) {}
         setInterval(updateChain, 30000);
 
         if(getEl('enemyId').value.trim()) fetchTargets();
@@ -202,7 +209,6 @@
     // STRICT V2 API FETCHER
     async function apiV2(endpoint) {
         const key = getEl('apiKey').value.trim();
-        // Uses strictly v2 endpoint structure
         const res = await fetch(`https://api.torn.com/v2/${endpoint}?key=${key}`);
         const data = await res.json();
         
@@ -210,9 +216,15 @@
         return data;
     }
 
-    async function getMyFactionId() {
+    async function getMyProfile() {
+        // Fetch profile to get Faction ID AND Level
         const data = await apiV2('user/profile');
+        
         if(data.faction) localStorage.setItem('my_faction_id', data.faction.faction_id);
+        if(data.level) {
+            localStorage.setItem('my_level', data.level);
+            getEl('myLevelDisplay').innerText = data.level;
+        }
     }
 
     async function updateChain() {
@@ -241,15 +253,11 @@
             // 1. Official Wars (V2)
             const data = await apiV2(`faction/${id}/wars`);
             
-            // Handle V2 War Structure (Arrays vs Objects)
             const ranked = data.ranked_wars || {};
             for(let k in ranked) {
-                // v2 might return standard object keys or array
                 const w = ranked[k];
                 if(w.factions) {
-                     for(let fid in w.factions) {
-                        if(parseInt(fid) !== parseInt(id)) enemyId = fid;
-                     }
+                     for(let fid in w.factions) if(parseInt(fid) !== parseInt(id)) enemyId = fid;
                 }
             }
             
@@ -261,14 +269,11 @@
                 });
             }
 
-            // 3. Detective Mode (V2 Attacks)
+            // 3. Detective Mode
             if(!enemyId) {
                 const attData = await apiV2(`faction/${id}/attacks`);
-                // V2 often returns array for attacks
-                let attacks = [];
-                if(Array.isArray(attData.attacks)) attacks = attData.attacks;
-                else if(attData.attacks) attacks = Object.values(attData.attacks);
-
+                let attacks = Array.isArray(attData.attacks) ? attData.attacks : Object.values(attData.attacks || {});
+                
                 const counts = {};
                 attacks.forEach(a => {
                     if(a.initiated_by == id && a.defender_faction && a.defender_faction != id) {
@@ -310,6 +315,9 @@
         getEl('loading').style.display = 'block';
         getEl('targetTable').innerHTML = '';
 
+        // Get My Level for comparison
+        const myLevel = parseInt(localStorage.getItem('my_level')) || 0;
+
         try {
             const data = await apiV2(`faction/${parsed.id}/members`);
             
@@ -333,16 +341,38 @@
                 const rMin = ((Math.log(m.level)+1)/4).toFixed(2);
                 const rMax = (rMin*3).toFixed(2);
 
+                // LEVEL COMPARISON LOGIC
+                let diff = m.level - myLevel;
+                let diffClass = 'text-muted'; // Neutral
+                let diffText = 'Same';
+
+                if(myLevel > 0) {
+                    if (diff <= -10) { 
+                        diffClass = 'lvl-easy'; 
+                        diffText = `-${Math.abs(diff)} (Easy?)`;
+                    } else if (diff >= 10) { 
+                        diffClass = 'lvl-hard'; 
+                        diffText = `+${diff} (Hard?)`;
+                    } else { 
+                        diffClass = 'lvl-fair'; 
+                        diffText = (diff > 0 ? `+${diff}` : diff) + " (Fair)";
+                    }
+                }
+
                 html += `
                 <tr>
                     <td style="padding-left: 25px;">
                         <a href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" class="text-white text-decoration-none fw-bold">${m.name}</a>
                         <span class="text-muted small ms-2">[${m.id}]</span>
                     </td>
-                    <td><span class="level-box">${m.level}</span></td>
+                    <td>
+                        <span class="lvl-box">${m.level}</span>
+                        <div class="${diffClass} small" style="font-size:0.75rem;">${diffText}</div>
+                    </td>
                     <td class="respect-val">${rMin} - ${rMax}</td>
                     <td><span class="status-badge ${stClass}">${state}</span></td>
                     <td class="text-end" style="padding-right: 25px;">
+                        <a href="https://yata.yt/profile/${m.id}" target="_blank" class="btn btn-spy rounded-pill" title="Check Spies on YATA">👁️ Spy</a>
                         <a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-attack rounded-pill">ATTACK</a>
                     </td>
                 </tr>`;
