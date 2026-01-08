@@ -139,115 +139,145 @@
 </div>
 
 <script>
-    // --- UTILITIES ---
+    // ==========================================
+    // ⚔️ CONFIGURATION
+    const FALLBACK_ENEMY_ID = 0; 
+    // ==========================================
+
     const getEl = (id) => document.getElementById(id);
     const showError = (msg) => {
         const area = getEl('alertArea');
-        area.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Error:</strong> ${msg}
+        area.innerHTML = `<div class="alert alert-warning alert-dismissible fade show" role="alert">
+            ${msg}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>`;
     };
 
-    // --- INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('torn_api_key');
-        if(savedKey) {
-            getEl('apiKey').value = savedKey;
-            // Optional: Auto-load if key exists
-            // initTool(); 
-        }
+        if(savedKey) getEl('apiKey').value = savedKey;
+        if(FALLBACK_ENEMY_ID > 0) getEl('enemyId').value = FALLBACK_ENEMY_ID;
+        
+        // Allow pasting a full URL into the ID box
+        getEl('enemyId').addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const val = e.target.value;
+                // Extract ID from URL like "torn.com/factions.php?step=profile&ID=12345"
+                const match = val.match(/ID=(\d+)/i) || val.match(/factions\/(\d+)/i);
+                if(match) e.target.value = match[1];
+            }, 10);
+        });
     });
 
     async function initTool() {
         const key = getEl('apiKey').value.trim();
         if(!key) return showError("Please enter an API Key.");
-        
         localStorage.setItem('torn_api_key', key);
         getEl('dashboard').style.display = 'block';
         
-        // 1. Get My Faction ID (needed for chain)
-        await getMyFactionId();
-        
-        // 2. Start Chain Monitor
-        updateChain();
-        setInterval(updateChain, 30000); // Auto-refresh chain every 30s
+        try { await getMyFactionId(); updateChain(); } catch(e) {}
+        setInterval(updateChain, 30000); 
+
+        if(getEl('enemyId').value.trim() !== "") fetchTargets();
     }
 
-    // --- V2 API FETCHER ---
-    async function apiV2(endpoint) {
+    // --- HYBRID API FETCHER ---
+    async function apiFetch(endpointV2, endpointV1) {
         const key = getEl('apiKey').value.trim();
-        // V2 URL: https://api.torn.com/v2/{endpoint}
-        // We append key as query param for simplicity in this static file
         try {
-            const res = await fetch(`https://api.torn.com/v2/${endpoint}?key=${key}`);
+            const res = await fetch(`https://api.torn.com/v2/${endpointV2}?key=${key}`);
             const data = await res.json();
-            
-            if(data.error) throw new Error(data.error.error || "Unknown API Error");
-            return data;
+            if(!data.error) return data;
+            throw new Error("v2 failed");
         } catch (err) {
-            console.error(err);
-            throw err;
+            const res = await fetch(`https://api.torn.com/${endpointV1}&key=${key}`);
+            const data = await res.json();
+            if(data.error) throw new Error(data.error.error);
+            return data;
         }
     }
 
-    // --- CORE FUNCTIONS ---
     async function getMyFactionId() {
-        try {
-            // V2 Profile
-            const data = await apiV2('user/profile');
-            if(data.faction && data.faction.faction_id) {
-                localStorage.setItem('my_faction_id', data.faction.faction_id);
-            }
-        } catch(e) { showError("Failed to fetch profile: " + e.message); }
+        const data = await apiFetch('user/profile', 'user/?selections=profile');
+        if(data.faction && data.faction.faction_id) {
+            localStorage.setItem('my_faction_id', data.faction.faction_id);
+        }
     }
 
     async function updateChain() {
         const myFacId = localStorage.getItem('my_faction_id');
-        if(!myFacId) return; // Can't check chain if we don't know who we are
-
+        if(!myFacId) return;
         try {
-            // V2 Chain Endpoint: /faction/{id}/chain
-            const data = await apiV2(`faction/${myFacId}/chain`);
-            
-            // Render Chain
+            const data = await apiFetch(`faction/${myFacId}/chain`, `faction/${myFacId}?selections=chain`);
             const chain = data.chain || {};
-            const count = chain.current || 0;
-            const time = chain.timeout || 0;
-            
-            getEl('chainCount').innerText = count;
+            getEl('chainCount').innerText = chain.current || 0;
             const timeEl = getEl('chainTimeout');
+            const time = chain.timeout || 0;
             timeEl.innerText = time + "s";
-            
-            // Color Logic
             timeEl.className = 'chain-time ' + (time < 30 ? 'text-chain-crit' : (time < 60 ? 'text-chain-warn' : 'text-chain-cool'));
-            
-        } catch(e) { console.error("Chain Error:", e); }
+        } catch(e) {}
     }
 
+    // --- THE NEW "SMART" DETECTOR ---
     async function autoDetectWar() {
         const myFacId = localStorage.getItem('my_faction_id');
-        if(!myFacId) return showError("Load your profile first (Click 'Load' at top).");
+        if(!myFacId) return showError("Please click 'Load' first.");
 
         getEl('loading').style.display = 'block';
+        let enemyId = null;
+
         try {
-            // V2 Faction Basic Info to find wars
-            // Note: The specific 'ranked_wars' field location in v2 can vary. 
-            // We check the standard 'wars' or 'ranked_wars' output.
-            const data = await apiV2(`faction/${myFacId}/wars`); 
+            // 1. Check Official Ranked/Territory Wars
+            const data = await apiFetch(`faction/${myFacId}/wars`, `faction/${myFacId}?selections=basic,territory`);
             
-            let enemyId = null;
-            // V2 usually returns an array or object for wars. 
-            // We look for a ranked war where one ID is not ours.
-            const wars = data.ranked_wars || {}; // Adjust based on exact V2 response if needed
-            
-            for(let id in wars) {
-                const w = wars[id];
-                for(let fid in w.factions) {
-                    if(parseInt(fid) != parseInt(myFacId)) {
-                        enemyId = fid;
-                        break;
+            // Check Ranked Wars
+            const ranked = data.ranked_wars || {}; 
+            for(let id in ranked) {
+                for(let fid in ranked[id].factions) {
+                    if(parseInt(fid) != parseInt(myFacId)) enemyId = fid;
+                }
+            }
+
+            // Check Territory Wars (if Ranked failed)
+            if(!enemyId && data.territory_wars) {
+                data.territory_wars.forEach(war => {
+                     if(parseInt(war.assaulting_faction) == parseInt(myFacId)) enemyId = war.defending_faction;
+                     if(parseInt(war.defending_faction) == parseInt(myFacId)) enemyId = war.assaulting_faction;
+                });
+            }
+
+            // 2. DETECTIVE MODE: Scan Attack Logs
+            if(!enemyId) {
+                showError("No official war found. Scanning recent attacks...");
+                const attData = await apiFetch(`faction/${myFacId}/attacks`, `faction/${myFacId}?selections=attacks`);
+                const attacks = Object.values(attData.attacks || {});
+                
+                // Count which faction is getting hit the most
+                const counts = {};
+                attacks.forEach(a => {
+                    // Only count outgoing attacks (we initiated)
+                    if(a.initiated_by == myFacId && a.defender_faction) {
+                        const fid = a.defender_faction;
+                        if(fid != myFacId) { // Don't count friendly fire
+                            counts[fid] = (counts[fid] || 0) + 1;
+                        }
                     }
+                });
+
+                // Find the ID with the most hits
+                let maxHits = 0;
+                let likelyEnemy = null;
+                for(const [fid, count] of Object.entries(counts)) {
+                    if(count > maxHits) {
+                        maxHits = count;
+                        likelyEnemy = fid;
+                    }
+                }
+
+                // If we found a target with at least 3 recent hits, assume it's the enemy
+                if(likelyEnemy && maxHits >= 3) {
+                    enemyId = likelyEnemy;
+                    showError(`<b>Detective Mode:</b> It looks like you are hitting Faction ID <b>${enemyId}</b> (${maxHits} recent hits). Loading them.`);
                 }
             }
 
@@ -255,13 +285,19 @@
 
             if(enemyId) {
                 getEl('enemyId').value = enemyId;
-                fetchTargets(); // Auto-trigger search
+                fetchTargets();
             } else {
-                showError("No active Ranked War found via API. Please enter ID manually.");
+                if(FALLBACK_ENEMY_ID > 0) {
+                    getEl('enemyId').value = FALLBACK_ENEMY_ID;
+                    showError("Detection failed. Using Fallback ID.");
+                    fetchTargets();
+                } else {
+                    showError("Could not auto-detect. Please enter ID manually.");
+                }
             }
         } catch(e) { 
             getEl('loading').style.display = 'none';
-            showError("Auto-detect failed: " + e.message); 
+            showError("Detection error: " + e.message); 
         }
     }
 
@@ -273,15 +309,12 @@
         getEl('targetTable').innerHTML = '';
 
         try {
-            // V2 Members: /faction/{id}/members
-            const data = await apiV2(`faction/${enemyId}/members`);
+            const data = await apiFetch(`faction/${enemyId}/members`, `faction/${enemyId}?selections=basic,members`);
             
-            // Normalize members (handle array vs object)
             let members = [];
             if(Array.isArray(data.members)) members = data.members;
             else if(data.members) members = Object.values(data.members);
 
-            // Sort by Level Descending
             members.sort((a,b) => b.level - a.level);
 
             const filter = getEl('statusFilter').value;
@@ -290,50 +323,33 @@
 
             members.forEach(m => {
                 const state = m.status.state;
-                const statusDesc = m.status.description || "";
-                
-                // Filter Logic
                 if(filter === 'okay' && state !== 'Okay') return;
                 
                 count++;
-                
-                // Badge Logic
                 let badgeClass = 'bg-secondary';
                 if(state === 'Okay') badgeClass = 'badge-okay';
                 if(state === 'Hospital') badgeClass = 'badge-hospital';
                 if(state === 'Jail') badgeClass = 'badge-jail';
                 if(state === 'Traveling') badgeClass = 'badge-travel';
 
-                // Respect Calc
                 const rMin = ((Math.log(m.level) + 1) / 4).toFixed(2);
                 const rMax = (rMin * 3).toFixed(2);
 
                 html += `
                 <tr>
-                    <td>
-                        <a href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" class="text-decoration-none fw-bold text-white">
-                            ${m.name} <span class="text-muted small">[${m.id}]</span>
-                        </a>
-                    </td>
+                    <td><a href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" class="text-decoration-none fw-bold text-white">${m.name}</a></td>
                     <td><span class="badge bg-dark border border-secondary">${m.level}</span></td>
                     <td class="text-info font-monospace">${rMin} - ${rMax}</td>
-                    <td>
-                        <span class="badge ${badgeClass} badge-status">${state}</span>
-                        <div class="small text-muted" style="font-size:0.7em;">${statusDesc.substring(0,20)}</div>
-                    </td>
-                    <td>
-                        <a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-sm btn-danger btn-attack">⚔️ ATTACK</a>
-                    </td>
+                    <td><span class="badge ${badgeClass} badge-status">${state}</span></td>
+                    <td><a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-sm btn-danger btn-attack">ATTACK</a></td>
                 </tr>`;
             });
 
             if(count === 0) html = `<tr><td colspan="5" class="text-center py-4">No targets found matching filter.</td></tr>`;
-
             getEl('targetTable').innerHTML = html;
             getEl('targetCount').innerText = `${count} Found`;
 
         } catch(e) { showError(e.message); }
-        
         getEl('loading').style.display = 'none';
     }
 </script>
