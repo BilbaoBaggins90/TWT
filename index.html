@@ -24,9 +24,12 @@
         .st-hosp { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3); }
         .st-jail { background: rgba(255, 193, 7, 0.15);   color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
         .st-trav { background: rgba(13, 202, 240, 0.15);  color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.3); }
-        .lvl-easy { color: #20c997; font-weight: bold; }
-        .lvl-fair { color: #ffc107; font-weight: bold; }
-        .lvl-hard { color: #ff6b6b; font-weight: bold; }
+        
+        /* LEVEL COLORS */
+        .lvl-easy { color: #20c997; font-weight: bold; } /* Green */
+        .lvl-fair { color: #ffc107; font-weight: bold; } /* Yellow */
+        .lvl-hard { color: #ff6b6b; font-weight: bold; } /* Red */
+        
         .btn-attack { background-color: #ff6b6b; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 15px; }
         .btn-spy { background-color: #495057; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 10px; margin-right: 5px; }
     </style>
@@ -93,7 +96,7 @@
 
         <div class="card-custom overflow-hidden">
             <div class="card-header-custom d-flex justify-content-between align-items-center">
-                <span>Target List (My Level: <span id="myLevelDisplay" class="text-info">--</span>)</span>
+                <span>Target List (My Level: <span id="myLevelDisplay" class="text-info fw-bold">--</span>)</span>
                 <span id="targetCount" class="badge bg-secondary">0</span>
             </div>
             <div class="table-responsive">
@@ -132,6 +135,10 @@
         if(savedKey) getEl('apiKey').value = savedKey;
         if(FALLBACK_ENEMY_ID > 0) getEl('enemyId').value = FALLBACK_ENEMY_ID;
 
+        // Populate Level from previous session if available
+        const savedLvl = localStorage.getItem('my_level');
+        if(savedLvl) getEl('myLevelDisplay').innerText = savedLvl;
+
         getEl('enemyId').addEventListener('input', (e) => {
             const val = e.target.value;
             const match = val.match(/ID=(\d+)/i) || val.match(/factions\/(\d+)/i);
@@ -160,6 +167,9 @@
     // 1. GET PROFILE (Uses v1 - Reliable)
     async function getMyProfile() {
         const key = getEl('apiKey').value.trim();
+        // Force update UI to show we are looking
+        getEl('myLevelDisplay').innerText = "...";
+        
         const res = await fetch(`https://api.torn.com/user/?selections=profile&key=${key}`);
         const data = await res.json();
         
@@ -182,11 +192,9 @@
         let enemyId = null;
 
         try {
-            // Call v2 endpoint for wars
             const res = await fetch(`https://api.torn.com/v2/faction/${id}/wars?key=${key}`);
             const data = await res.json();
             
-            // Check Ranked Wars
             const ranked = data.ranked_wars || {};
             for(let k in ranked) {
                 const w = ranked[k];
@@ -195,7 +203,6 @@
                 }
             }
             
-            // Check Territory Wars
             if(!enemyId && data.territory_wars) {
                 data.territory_wars.forEach(w => {
                     if(w.assaulting_faction == id) enemyId = w.defending_faction;
@@ -222,11 +229,16 @@
         getEl('loading').style.display = 'block';
         getEl('targetTable').innerHTML = '';
         
-        // My Level for comparison
-        const myLevel = parseInt(localStorage.getItem('my_level')) || 0;
+        // Ensure My Level is loaded. If not, fetch it now.
+        let myLevel = parseInt(localStorage.getItem('my_level')) || 0;
+        if(myLevel === 0) {
+            try {
+                await getMyProfile();
+                myLevel = parseInt(localStorage.getItem('my_level')) || 0;
+            } catch(e) { console.warn("Could not fetch profile for level comp."); }
+        }
 
         try {
-            // v1 Member List
             const res = await fetch(`https://api.torn.com/faction/${rawId}?selections=basic,members&key=${key}`);
             const data = await res.json();
             if(data.error) throw new Error(data.error.error);
