@@ -3,193 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torn War Room - Robust</title>
+    <title>Torn Target Finder (Simple)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #121212; color: #ccc; font-family: monospace; }
-        .box { background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        .btn-primary { background-color: #0d6efd; border: none; font-weight: bold; }
-        .log-window { background: #000; color: #0f0; height: 150px; overflow-y: scroll; padding: 10px; border: 1px solid #444; font-size: 12px; font-family: 'Courier New', monospace; margin-bottom: 20px; }
-        .error-text { color: #ff5555; }
-        .success-text { color: #55ff55; }
+        body { background-color: #111; color: #eee; font-family: sans-serif; padding: 20px; }
+        .box { background: #222; border: 1px solid #444; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
+        .btn-go { width: 100%; font-weight: bold; font-size: 1.2rem; padding: 10px; }
+        .stat-box { text-align: center; padding: 10px; background: #333; border-radius: 5px; margin-bottom: 10px; }
+        .chain-num { font-size: 2rem; font-weight: bold; color: #fff; }
+        
+        /* Status Colors */
+        .status-Okay { color: #20c997; font-weight: bold; }
+        .status-Hospital { color: #dc3545; font-weight: bold; }
+        .status-Jail { color: #ffc107; font-weight: bold; }
+        .status-Traveling { color: #0dcaf0; font-weight: bold; }
         
         /* Table */
-        .table-dark th { background: #222; color: #888; }
-        .table-dark td { background: #1a1a1a; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: #888; border-bottom: 1px solid #555; padding: 10px; }
+        td { border-bottom: 1px solid #333; padding: 10px; vertical-align: middle; }
         
-        /* Badges */
-        .badge-status { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
-        .b-okay { background: rgba(32, 201, 151, 0.2); color: #20c997; }
-        .b-hosp { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
-        .b-jail { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
-        .b-trav { background: rgba(13, 202, 240, 0.2); color: #0dcaf0; }
+        .error-msg { color: #ff5555; background: #330000; padding: 10px; border: 1px solid red; display: none; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-<div class="container mt-4">
-    <h3 class="mb-4 text-white">⚔️ Torn War Room <small class="text-muted fs-6">(Robust Mode)</small></h3>
+<div class="container" style="max-width: 800px;">
+    
+    <h2 class="mb-4">⚔️ Torn Target Finder</h2>
+
+    <div id="errorBox" class="error-msg"></div>
 
     <div class="box">
-        <label class="form-label text-white">Step 1: API Connection</label>
-        <div class="input-group">
-            <input type="text" id="apiKey" class="form-control bg-dark text-white" placeholder="Enter Public Key">
-            <button class="btn btn-primary" onclick="connectAPI()">TEST CONNECTION</button>
+        <div class="mb-3">
+            <label>Your API Key</label>
+            <input type="text" id="apiKey" class="form-control bg-dark text-white" placeholder="Public Key">
+        </div>
+        <div class="mb-3">
+            <label>Enemy Faction ID (Manual Entry)</label>
+            <input type="number" id="enemyId" class="form-control bg-dark text-white" placeholder="e.g. 12345">
+        </div>
+        <button class="btn btn-success btn-go" onclick="runTool()">GET TARGETS</button>
+    </div>
+
+    <div class="box" id="chainBox" style="display:none;">
+        <h5 class="text-muted">Enemy Chain Status</h5>
+        <div class="row">
+            <div class="col-6">
+                <div class="stat-box">
+                    <div class="small text-muted">COUNT</div>
+                    <div id="chainCount" class="chain-num">-</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-box">
+                    <div class="small text-muted">TIMEOUT</div>
+                    <div id="chainTime" class="chain-num">-</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="sysLog" class="log-window">Waiting for input...</div>
-
-    <div id="dashboard" style="display:none;">
-        
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <div class="box h-100 text-center">
-                    <div class="text-muted small">CHAIN</div>
-                    <h2 id="chainCount" class="text-white">-</h2>
-                    <div id="chainTimer">-</div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                 <div class="box h-100 text-center">
-                    <div class="text-muted small">MY STATUS</div>
-                    <div id="myDetails" class="mt-2 text-info">Not Loaded</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="box">
-            <div class="row g-2">
-                <div class="col-md-8">
-                    <input type="text" id="enemyId" class="form-control bg-dark text-white" placeholder="Enemy Faction ID">
-                </div>
-                <div class="col-md-4">
-                    <button class="btn btn-success w-100 fw-bold" onclick="scanEnemy()">SCAN TARGETS</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="box p-0 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-dark mb-0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Level</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultTable">
-                        <tr><td colspan="4" class="text-center p-3 text-muted">Enter ID and click Scan</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
+    <div class="box" id="targetBox" style="display:none;">
+        <h5 class="text-muted mb-3">Targets</h5>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Level</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
     </div>
+
 </div>
 
 <script>
-    // --- LOGGER ---
-    const LOG = document.getElementById('sysLog');
-    function log(msg, type='info') {
-        const color = type === 'error' ? 'error-text' : 'success-text';
-        LOG.innerHTML += `<div><span class="${color}">></span> ${msg}</div>`;
-        LOG.scrollTop = LOG.scrollHeight;
-    }
+    // --- HELPERS ---
+    const getEl = (id) => document.getElementById(id);
+    const showError = (msg) => {
+        const box = getEl('errorBox');
+        box.style.display = 'block';
+        box.innerText = "ERROR: " + msg;
+    };
+    const clearError = () => { getEl('errorBox').style.display = 'none'; };
 
-    // --- GLOBAL STATE ---
-    let myLevel = 0;
-    let myFaction = null;
+    // --- MAIN FUNCTION ---
+    async function runTool() {
+        clearError();
+        const key = getEl('apiKey').value.trim();
+        const id = getEl('enemyId').value.trim();
 
-    // --- 1. CONNECT & TEST ---
-    async function connectAPI() {
-        const key = document.getElementById('apiKey').value.trim();
-        if(!key) return log("Error: API Key is empty", "error");
-        
+        if(!key) return showError("API Key is missing.");
+        if(!id) return showError("Enemy ID is missing.");
+
         localStorage.setItem('torn_api_key', key);
-        log("Testing connection...");
+        
+        getEl('chainBox').style.display = 'block';
+        getEl('targetBox').style.display = 'block';
+        getEl('tableBody').innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
 
+        // 1. GET CHAIN (Using V2 API - Required)
+        // We do this separately so if it fails, the list still loads.
+        fetchChain(key, id);
+
+        // 2. GET MEMBERS (Using V1 API - Most Reliable)
         try {
-            // Use V2 for Profile Check
-            const url = `https://api.torn.com/v2/user/profile?key=${key}`;
+            const url = `https://api.torn.com/faction/${id}?selections=basic,members&key=${key}`;
             const res = await fetch(url);
             const data = await res.json();
 
             if(data.error) {
-                log(`API Error: ${data.error.error}`, "error");
-                return;
+                // If V1 fails, it usually returns a clear error code
+                throw new Error(data.error.error);
             }
 
-            log(`Connected! Welcome, ${data.name}`);
+            // Process Members
+            const members = Object.values(data.members || {});
             
-            // Save Data
-            myLevel = data.level;
-            myFaction = data.faction?.faction_id;
-            
-            // Update UI
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('myDetails').innerText = `Lvl ${myLevel} | Fac: ${myFaction || 'None'}`;
-            
-            // Start Chain Watcher
-            if(myFaction) {
-                log("Starting Chain Monitor...");
-                updateChain();
-                setInterval(updateChain, 30000);
-            }
+            // Sort by Level
+            members.sort((a,b) => b.level - a.level);
 
-            // Try to Auto-Fill Enemy ID if we find a war
-            detectWar();
+            let html = '';
+            members.forEach(m => {
+                const state = m.status.state;
+                if(state === "Fallen" || state === "Federal") return; // Skip useless
+
+                html += `
+                <tr>
+                    <td>
+                        <a href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" style="color:#fff; font-weight:bold; text-decoration:none;">
+                            ${m.name}
+                        </a>
+                    </td>
+                    <td>${m.level}</td>
+                    <td class="status-${state}">${state}</td>
+                    <td>
+                        <a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-sm btn-danger">ATTACK</a>
+                    </td>
+                </tr>`;
+            });
+
+            getEl('tableBody').innerHTML = html;
 
         } catch(e) {
-            log(`Network Error: ${e.message}`, "error");
-            log("Check if your AdBlock is blocking 'api.torn.com'", "error");
+            showError("Target Scan Failed: " + e.message);
+            getEl('tableBody').innerHTML = '<tr><td colspan="4" style="color:red">Failed.</td></tr>';
         }
     }
 
-    // --- 2. DETECT WAR (V2) ---
-    async function detectWar() {
-        if(!myFaction) return;
-        const key = document.getElementById('apiKey').value;
-        
+    // --- CHAIN UPDATER (V2) ---
+    async function fetchChain(key, id) {
         try {
-            log("Checking for active wars...");
-            const res = await fetch(`https://api.torn.com/v2/faction/${myFaction}/wars?key=${key}`);
+            // V2 Endpoint
+            const url = `https://api.torn.com/v2/faction/${id}/chain?key=${key}`;
+            const res = await fetch(url);
             const data = await res.json();
-            
-            let enemyId = null;
-            
-            // Check Ranked
-            const ranked = data.ranked_wars || {};
-            for(let k in ranked) {
-                const w = ranked[k];
-                if(w.factions) {
-                    for(let fid in w.factions) if(parseInt(fid) !== parseInt(myFaction)) enemyId = fid;
-                }
-            }
 
-            if(enemyId) {
-                document.getElementById('enemyId').value = enemyId;
-                log(`Auto-Detected War with Faction ${enemyId}`);
+            if(data.chain) {
+                getEl('chainCount').innerText = data.chain.current;
+                getEl('chainTime').innerText = data.chain.timeout;
             } else {
-                log("No active war found via API. Please enter ID manually.");
+                 getEl('chainCount').innerText = "N/A";
             }
-
-        } catch(e) { log("War detection skipped: " + e.message, "error"); }
+        } catch(e) {
+            console.log("Chain error: " + e.message);
+            getEl('chainCount').innerText = "Err";
+        }
     }
 
-    // --- 3. SCAN ENEMY (V2) ---
-    async function scanEnemy() {
-        const enemyId = document.getElementById('enemyId').value.trim();
-        if(!enemyId) return log("Error: Enter an Enemy ID", "error");
-        
-        const key = document.getElementById('apiKey').value;
-        log(`Scanning Faction ${enemyId}...`);
-        
-        const tbody = document.getElementById('resultTable');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-3">Scanning...</td></tr>';
+    // Load saved key
+    const saved = localStorage.getItem('torn_api_key');
+    if(saved) getEl('apiKey').value = saved;
 
-        try {
-            // Using V2 Members Endpoint
-            const res = await fetch(`https://api.torn.com/v2/faction/${enemyId
+</script>
+</body>
+</html>
