@@ -3,80 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torn War Room v2</title>
+    <title>Torn War Room</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* DARK THEME BASE */
-        body { background-color: #121212; color: #e0e0e0; font-family: 'Inter', 'Segoe UI', sans-serif; }
-        
-        /* HEADER */
+        body { background-color: #121212; color: #e0e0e0; font-family: 'Inter', sans-serif; }
         .header-section { background: #1e1e1e; padding: 20px 0; border-bottom: 1px solid #333; margin-bottom: 30px; }
-        .api-input { background: #2d2d2d; border: 1px solid #444; color: #fff; text-align: center; letter-spacing: 1px; font-family: monospace; }
+        .api-input { background: #2d2d2d; border: 1px solid #444; color: #fff; text-align: center; font-family: monospace; }
         .api-input:focus { background: #000; border-color: #7952b3; color: #fff; box-shadow: none; }
-
-        /* CARDS */
-        .card-custom { background: #1e1e1e; border: 1px solid #333; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-        .card-header-custom { background: #252525; border-bottom: 1px solid #333; padding: 15px 20px; font-weight: 600; color: #fff; }
-
-        /* CHAIN MONITOR */
-        .chain-val { font-size: 3.5rem; font-weight: 800; line-height: 1; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
-        .chain-time { font-size: 1.5rem; font-weight: 700; letter-spacing: 1px; }
+        .card-custom { background: #1e1e1e; border: 1px solid #333; border-radius: 12px; }
+        .card-header-custom { background: #252525; border-bottom: 1px solid #333; padding: 15px 20px; font-weight: 600; }
+        .chain-val { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+        .chain-time { font-size: 1.5rem; font-weight: 700; }
         .text-chain-cool { color: #20c997; } 
         .text-chain-warn { color: #ffc107; } 
         .text-chain-crit { color: #ff6b6b; } 
-
-        /* TABLE STYLING */
-        .table-custom { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .table-custom th { 
-            background-color: #252525; 
-            color: #888; 
-            text-transform: uppercase; 
-            font-size: 0.75rem; 
-            letter-spacing: 1px; 
-            padding: 15px; 
-            border-bottom: 1px solid #333; 
-        }
-        .table-custom td { 
-            vertical-align: middle; 
-            background-color: #1e1e1e; 
-            border-bottom: 1px solid #2a2a2a; 
-            padding: 15px; 
-            color: #ddd; 
-        }
-        .table-custom tr:hover td { background-color: #2a2a2a; }
-
-        /* MODERN BADGES */
-        .status-badge { 
-            padding: 5px 10px; 
-            border-radius: 6px; 
-            font-size: 0.85rem; 
-            font-weight: 600; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-block;
-            min-width: 80px;
-            text-align: center;
-        }
-
+        .table-custom th { background-color: #252525; color: #888; text-transform: uppercase; font-size: 0.75rem; padding: 15px; }
+        .table-custom td { vertical-align: middle; background-color: #1e1e1e; border-bottom: 1px solid #2a2a2a; padding: 15px; color: #ddd; }
+        .status-badge { padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; min-width: 80px; text-align: center; display:inline-block; }
         .st-okay { background: rgba(32, 201, 151, 0.15); color: #20c997; border: 1px solid rgba(32, 201, 151, 0.3); }
         .st-hosp { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3); }
         .st-jail { background: rgba(255, 193, 7, 0.15);   color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
         .st-trav { background: rgba(13, 202, 240, 0.15);  color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.3); }
-
-        /* LEVEL DIFFERENCE COLORS */
-        .lvl-easy { color: #20c997; font-weight: bold; } /* Green */
-        .lvl-fair { color: #ffc107; font-weight: bold; } /* Yellow */
-        .lvl-hard { color: #ff6b6b; font-weight: bold; } /* Red */
-        .lvl-box  { background: #333; padding: 4px 8px; border-radius: 4px; display:inline-block; min-width: 40px; text-align: center;}
-
-        .respect-val { color: #a5d8ff; font-family: monospace; font-size: 1.1em; } 
-
-        .btn-primary { background-color: #6f42c1; border: none; }
-        .btn-primary:hover { background-color: #5a32a3; }
-        .btn-attack { background-color: #ff6b6b; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 15px; letter-spacing: 1px; }
-        .btn-attack:hover { background-color: #fa5252; color: white; box-shadow: 0 0 10px rgba(255, 107, 107, 0.4); }
+        .lvl-easy { color: #20c997; font-weight: bold; }
+        .lvl-fair { color: #ffc107; font-weight: bold; }
+        .lvl-hard { color: #ff6b6b; font-weight: bold; }
+        .btn-attack { background-color: #ff6b6b; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 15px; }
         .btn-spy { background-color: #495057; color: white; border: none; font-weight: bold; font-size: 0.8rem; padding: 6px 10px; margin-right: 5px; }
-        .btn-spy:hover { background-color: #ced4da; color: #212529; }
     </style>
 </head>
 <body>
@@ -85,7 +37,7 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">v2</span></h3>
+                <h3 class="fw-bold mb-0 text-white">⚔️ War Room <span class="text-muted fs-6">Hybrid</span></h3>
             </div>
             <div class="col-md-6 mt-3 mt-md-0">
                 <div class="input-group">
@@ -99,14 +51,12 @@
 
 <div class="container">
     <div id="alertArea"></div>
-
     <div id="loading" class="text-center py-5" style="display:none;">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-3 text-muted">Analyzing Targets...</p>
+        <p class="mt-3 text-muted">Connecting...</p>
     </div>
 
     <div id="dashboard" style="display:none;">
-        
         <div class="row g-4 mb-4">
             <div class="col-lg-5">
                 <div class="card-custom h-100 p-4 text-center d-flex flex-column justify-content-center">
@@ -115,7 +65,6 @@
                     <div id="chainTimeout" class="chain-time mt-2">-</div>
                 </div>
             </div>
-
             <div class="col-lg-7">
                 <div class="card-custom h-100">
                     <div class="card-header-custom">Target Settings</div>
@@ -124,7 +73,7 @@
                             <div class="col-md-8">
                                 <label class="small text-muted mb-1">Enemy Faction (ID or URL)</label>
                                 <div class="input-group">
-                                    <input type="text" id="enemyId" class="form-control bg-dark text-white border-secondary" placeholder="Paste ID or Link here...">
+                                    <input type="text" id="enemyId" class="form-control bg-dark text-white border-secondary" placeholder="Paste ID or Link...">
                                     <button class="btn btn-outline-light" onclick="autoDetectWar()">Auto-Detect</button>
                                 </div>
                             </div>
@@ -148,14 +97,14 @@
                 <span id="targetCount" class="badge bg-secondary">0</span>
             </div>
             <div class="table-responsive">
-                <table class="table-custom">
+                <table class="table table-custom w-100">
                     <thead>
                         <tr>
-                            <th style="padding-left: 25px;">Name</th>
+                            <th style="padding-left:25px;">Name</th>
                             <th>Level (Diff)</th>
                             <th>Est. Respect</th>
                             <th>Status</th>
-                            <th class="text-end" style="padding-right: 25px;">Action</th>
+                            <th class="text-end" style="padding-right:25px;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="targetTable">
@@ -164,7 +113,6 @@
                 </table>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -176,22 +124,22 @@
     const getEl = (id) => document.getElementById(id);
     const showError = (msg) => {
         const area = getEl('alertArea');
-        area.innerHTML = `<div class="alert alert-warning alert-dismissible fade show" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+        area.innerHTML = `<div class="alert alert-warning alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
     };
 
-    // INIT
     document.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('torn_api_key');
         if(savedKey) getEl('apiKey').value = savedKey;
         if(FALLBACK_ENEMY_ID > 0) getEl('enemyId').value = FALLBACK_ENEMY_ID;
 
-        // Auto-clean URL paste
         getEl('enemyId').addEventListener('input', (e) => {
             const val = e.target.value;
             const match = val.match(/ID=(\d+)/i) || val.match(/factions\/(\d+)/i);
             if(match) e.target.value = match[1];
         });
     });
+
+    // --- MAIN ENGINE ---
 
     async function initTool() {
         const key = getEl('apiKey').value.trim();
@@ -200,25 +148,22 @@
         
         getEl('dashboard').style.display = 'block';
         
-        try { await getMyProfile(); updateChain(); } catch(e) {}
-        setInterval(updateChain, 30000);
+        try { 
+            await getMyProfile(); 
+            updateChain(); 
+            setInterval(updateChain, 30000); 
+        } catch(e) { showError("Profile Load Failed: " + e.message); }
 
         if(getEl('enemyId').value.trim()) fetchTargets();
     }
 
-    // STRICT V2 API FETCHER
-    async function apiV2(endpoint) {
+    // 1. GET PROFILE (Uses v1 - Reliable)
+    async function getMyProfile() {
         const key = getEl('apiKey').value.trim();
-        const res = await fetch(`https://api.torn.com/v2/${endpoint}?key=${key}`);
+        const res = await fetch(`https://api.torn.com/user/?selections=profile&key=${key}`);
         const data = await res.json();
         
-        if(data.error) throw new Error(data.error.error || "Torn API Error");
-        return data;
-    }
-
-    async function getMyProfile() {
-        // Fetch profile to get Faction ID AND Level
-        const data = await apiV2('user/profile');
+        if(data.error) throw new Error(data.error.error);
         
         if(data.faction) localStorage.setItem('my_faction_id', data.faction.faction_id);
         if(data.level) {
@@ -227,32 +172,21 @@
         }
     }
 
-    async function updateChain() {
-        const id = localStorage.getItem('my_faction_id');
-        if(!id) return;
-        try {
-            const data = await apiV2(`faction/${id}/chain`);
-            const c = data.chain || {};
-            getEl('chainCount').innerText = c.current || 0;
-            
-            const t = c.timeout || 0;
-            const el = getEl('chainTimeout');
-            el.innerText = t + 's';
-            el.className = 'chain-time ' + (t < 30 ? 'text-chain-crit' : (t < 60 ? 'text-chain-warn' : 'text-chain-cool'));
-        } catch {}
-    }
-
+    // 2. DETECT WAR (Uses v2 - Required for Ranked Wars)
     async function autoDetectWar() {
         const id = localStorage.getItem('my_faction_id');
+        const key = getEl('apiKey').value.trim();
         if(!id) return showError("Load profile first");
         
         getEl('loading').style.display = 'block';
         let enemyId = null;
 
         try {
-            // 1. Official Wars (V2)
-            const data = await apiV2(`faction/${id}/wars`);
+            // Call v2 endpoint for wars
+            const res = await fetch(`https://api.torn.com/v2/faction/${id}/wars?key=${key}`);
+            const data = await res.json();
             
+            // Check Ranked Wars
             const ranked = data.ranked_wars || {};
             for(let k in ranked) {
                 const w = ranked[k];
@@ -261,7 +195,7 @@
                 }
             }
             
-            // 2. Territory Wars (V2)
+            // Check Territory Wars
             if(!enemyId && data.territory_wars) {
                 data.territory_wars.forEach(w => {
                     if(w.assaulting_faction == id) enemyId = w.defending_faction;
@@ -269,59 +203,35 @@
                 });
             }
 
-            // 3. Detective Mode
-            if(!enemyId) {
-                const attData = await apiV2(`faction/${id}/attacks`);
-                let attacks = Array.isArray(attData.attacks) ? attData.attacks : Object.values(attData.attacks || {});
-                
-                const counts = {};
-                attacks.forEach(a => {
-                    if(a.initiated_by == id && a.defender_faction && a.defender_faction != id) {
-                        counts[a.defender_faction] = (counts[a.defender_faction]||0)+1;
-                    }
-                });
-                
-                let max = 0;
-                for(let fid in counts) {
-                    if(counts[fid] > max) { max = counts[fid]; enemyId = fid; }
-                }
-                if(max < 3) enemyId = null; 
-                if(enemyId) showError(`Detective: Found ${max} recent hits on ID ${enemyId}.`);
-            }
-
             if(enemyId) {
                 getEl('enemyId').value = enemyId;
                 fetchTargets();
             } else {
-                showError("No active war detected. Please paste Enemy ID manually.");
+                showError("No active war detected. Paste Enemy ID manually.");
             }
         } catch(e) { showError(e.message); }
         getEl('loading').style.display = 'none';
     }
 
-    function cleanInput(val) {
-        const match = val.match(/[?&]ID=(\d+)/i) || val.match(/factions\/(\d+)/i);
-        if(match) return { id: match[1] };
-        if(!isNaN(val.trim())) return { id: val.trim() };
-        return { name: val.trim() };
-    }
-
+    // 3. FETCH TARGETS (Uses v1 - Reliable for Members)
     async function fetchTargets() {
-        const parsed = cleanInput(getEl('enemyId').value);
-        if(parsed.name) return showError(`Please use ID, not Name. <a href="https://www.torn.com/factions.php?step=hitlist&name=${parsed.name}" target="_blank">Search ID</a>`);
-        if(!parsed.id) return showError("Enter valid ID");
-
-        getEl('enemyId').value = parsed.id;
+        const rawId = getEl('enemyId').value.trim();
+        if(!rawId) return showError("Enter valid ID");
+        
+        const key = getEl('apiKey').value.trim();
         getEl('loading').style.display = 'block';
         getEl('targetTable').innerHTML = '';
-
-        // Get My Level for comparison
+        
+        // My Level for comparison
         const myLevel = parseInt(localStorage.getItem('my_level')) || 0;
 
         try {
-            const data = await apiV2(`faction/${parsed.id}/members`);
+            // v1 Member List
+            const res = await fetch(`https://api.torn.com/faction/${rawId}?selections=basic,members&key=${key}`);
+            const data = await res.json();
+            if(data.error) throw new Error(data.error.error);
             
-            let members = Array.isArray(data.members) ? data.members : Object.values(data.members || {});
+            let members = Object.values(data.members || {});
             members.sort((a,b) => b.level - a.level);
             
             const filter = getEl('statusFilter').value;
@@ -329,30 +239,29 @@
             let count = 0;
 
             members.forEach(m => {
-                const state = m.status.state;
-                if(filter === 'okay' && state !== 'Okay') return;
+                if(filter === 'okay' && m.status.state !== 'Okay') return;
                 count++;
 
                 let stClass = 'st-okay';
-                if(state === 'Hospital') stClass = 'st-hosp';
-                if(state === 'Jail') stClass = 'st-jail';
-                if(state === 'Traveling') stClass = 'st-trav';
+                if(m.status.state === 'Hospital') stClass = 'st-hosp';
+                if(m.status.state === 'Jail') stClass = 'st-jail';
+                if(m.status.state === 'Traveling') stClass = 'st-trav';
 
                 const rMin = ((Math.log(m.level)+1)/4).toFixed(2);
                 const rMax = (rMin*3).toFixed(2);
 
-                // LEVEL COMPARISON LOGIC
+                // Level Difference Logic
                 let diff = m.level - myLevel;
-                let diffClass = 'text-muted'; // Neutral
+                let diffClass = 'text-muted'; 
                 let diffText = 'Same';
 
                 if(myLevel > 0) {
                     if (diff <= -10) { 
                         diffClass = 'lvl-easy'; 
-                        diffText = `-${Math.abs(diff)} (Easy?)`;
+                        diffText = `-${Math.abs(diff)} (Easy)`;
                     } else if (diff >= 10) { 
                         diffClass = 'lvl-hard'; 
-                        diffText = `+${diff} (Hard?)`;
+                        diffText = `+${diff} (Hard)`;
                     } else { 
                         diffClass = 'lvl-fair'; 
                         diffText = (diff > 0 ? `+${diff}` : diff) + " (Fair)";
@@ -366,11 +275,11 @@
                         <span class="text-muted small ms-2">[${m.id}]</span>
                     </td>
                     <td>
-                        <span class="lvl-box">${m.level}</span>
+                        <span class="badge bg-dark border border-secondary">${m.level}</span>
                         <div class="${diffClass} small" style="font-size:0.75rem;">${diffText}</div>
                     </td>
-                    <td class="respect-val">${rMin} - ${rMax}</td>
-                    <td><span class="status-badge ${stClass}">${state}</span></td>
+                    <td class="text-info font-monospace">${rMin} - ${rMax}</td>
+                    <td><span class="status-badge ${stClass}">${m.status.state}</span></td>
                     <td class="text-end" style="padding-right: 25px;">
                         <a href="https://yata.yt/profile/${m.id}" target="_blank" class="btn btn-spy rounded-pill" title="Check Spies on YATA">👁️ Spy</a>
                         <a href="https://www.torn.com/loader.php?sid=attack&user2ID=${m.id}" target="_blank" class="btn btn-attack rounded-pill">ATTACK</a>
@@ -384,6 +293,24 @@
 
         } catch(e) { showError(e.message); }
         getEl('loading').style.display = 'none';
+    }
+
+    // 4. CHAIN UPDATE (Uses v1)
+    async function updateChain() {
+        const id = localStorage.getItem('my_faction_id');
+        const key = getEl('apiKey').value.trim();
+        if(!id) return;
+        try {
+            const res = await fetch(`https://api.torn.com/faction/${id}?selections=chain&key=${key}`);
+            const data = await res.json();
+            const c = data.chain || {};
+            getEl('chainCount').innerText = c.current || 0;
+            
+            const t = c.timeout || 0;
+            const el = getEl('chainTimeout');
+            el.innerText = t + 's';
+            el.className = 'chain-time ' + (t < 30 ? 'text-chain-crit' : (t < 60 ? 'text-chain-warn' : 'text-chain-cool'));
+        } catch {}
     }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
